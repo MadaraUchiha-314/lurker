@@ -1,0 +1,33 @@
+{
+  "manifest_version": 3,
+  "name": "Lurker",
+  "version": "1.0.0",
+  "description": "Monitor network calls with AI-powered chat interface",
+  "permissions": [
+    "webRequest",
+    "sidePanel",
+    "storage",
+    "tabs",
+    "windows"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
+      "type": "module"
+    }
+  ],
+  "side_panel": {
+    "default_path": "panel.html"
+  },
+  "action": {
+    "default_title": "Lurker - Network Analyzer"
+  }
+} 

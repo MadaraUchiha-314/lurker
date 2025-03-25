@@ -1,0 +1,34 @@
+{
+  "name": "lurker-agent",
+  "version": "1.0.0",
+  "description": "A Chrome extension that monitors network calls with an AI-powered chat interface",
+  "private": true,
+  "workspaces": [
+    "agent",
+    "extension",
+    "core"
+  ],
+  "scripts": {
+    "build": "npm run build --workspaces",
+    "dev": "npm run dev --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present"
+  },
+  "keywords": [
+    "chrome-extension",
+    "network-monitoring",
+    "langgraph",
+    "ai"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "@rollup/plugin-commonjs": "^25.0.7",
+    "@rollup/plugin-json": "^6.1.0",
+    "@rollup/plugin-node-resolve": "^15.2.3",
+    "@rollup/plugin-typescript": "^11.1.6",
+    "@types/chrome": "^0.0.310",
+    "rollup": "^4.12.0",
+    "rollup-plugin-dts": "^6.1.0",
+    "typescript": "^5.4.2"
+  }
+}
