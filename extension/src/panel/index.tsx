@@ -156,9 +156,16 @@ function Panel() {
       });
       
       // Log what we're sending to the server
+      const completedCalls = latestNetworkCalls.filter(call => call.response !== null);
+      const limitedCalls = completedCalls.slice(-100); // Limit to the most recent 100 network calls
+      
+      if (completedCalls.length > 100) {
+        console.log(`Limiting network calls from ${completedCalls.length} to 100 most recent completed calls`);
+      }
+      
       const requestBody = {
         message: input,
-        networkCalls: latestNetworkCalls.filter(call => call.response !== null) // Only send completed calls
+        networkCalls: limitedCalls
       };
       console.log('Sending to server:', requestBody);
       
