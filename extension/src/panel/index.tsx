@@ -52,7 +52,28 @@ function Panel() {
   const [isRecording, setIsRecording] = useState(true);
   const [isDarkMode, setIsDarkMode] = useState(false);
 
+  // Load saved messages on component mount
   useEffect(() => {
+    // Load saved messages from chrome storage
+    chrome.storage.local.get('messages', (result) => {
+      if (result.messages) {
+        // Convert stored messages back to LangChain message objects
+        const savedMessages = result.messages.map((stored: StoredMessage) => {
+          const { type, data } = stored;
+          if (type === 'human') {
+            return new HumanMessage(data.content);
+          } else if (type === 'ai') {
+            return new AIMessage(data.content);
+          } else if (type === 'system') {
+            return new SystemMessage(data.content);
+          } else {
+            return new AIMessage(data.content);
+          }
+        });
+        setMessages(savedMessages);
+      }
+    });
+    
     // Request network calls from background script
     loadNetworkCalls();
     
@@ -72,20 +93,17 @@ function Panel() {
     setIsDarkMode(isDark);
   }, []);
 
-  // Function to toggle theme between dark and light
-  const toggleTheme = () => {
-    const newThemeState = !isDarkMode;
-    setIsDarkMode(newThemeState);
-    
-    if (newThemeState) {
-      // Switch to dark mode
-      document.documentElement.classList.add('dark');
-      localStorage.setItem('theme', 'dark');
-    } else {
-      // Switch to light mode
-      document.documentElement.classList.remove('dark');
-      localStorage.setItem('theme', 'light');
-    }
+  // Save messages to chrome storage whenever they change
+  useEffect(() => {
+    // Convert messages to StoredMessage format for storage
+    const messagesToStore = messages.map(msg => msg.toDict());
+    chrome.storage.local.set({ messages: messagesToStore });
+  }, [messages]);
+
+  // Function to clear messages from storage
+  const clearMessages = () => {
+    setMessages([]);
+    chrome.storage.local.remove('messages');
   };
 
   // Function to load network calls from background script
@@ -99,45 +117,11 @@ function Panel() {
     );
   };
 
-  // Function to clear all network calls
-  const clearNetworkCalls = () => {
-    chrome.runtime.sendMessage({ type: 'CLEAR_NETWORK_CALLS' } as ChromeMessage, 
-      (response) => {
-        if (response && response.success) {
-          console.log('Network calls cleared successfully');
-          setNetworkCalls([]);
-          // Also clear the chat messages
-          setMessages([]);
-        } else {
-          console.error('Failed to clear network calls');
-        }
-      }
-    );
-  };
-
-  // Function to toggle network request recording
-  const toggleRecording = () => {
-    const newStatus = !isRecording;
-    setIsRecording(newStatus);
-    chrome.runtime.sendMessage({ type: 'TOGGLE_RECORDING', enabled: newStatus } as ChromeMessage, 
-      (response) => {
-        if (response && response.success) {
-          console.log(`Network recording ${newStatus ? 'enabled' : 'disabled'} successfully`);
-        } else {
-          console.error('Failed to toggle network recording');
-          // Revert the state change if the operation failed
-          setIsRecording(!newStatus);
-        }
-      }
-    );
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!input.trim()) return;
 
     const userMessage = new HumanMessage(input);
-
     setMessages(prev => [...prev, userMessage]);
     setInput('');
     setLoading(true);
@@ -200,11 +184,56 @@ function Panel() {
       
       console.log('Parsed messages:', parsedMessages);
       
-      setMessages(parsedMessages);
+      // Get the last message from the server (should be the AI response)
+      // Filter out the duplicated user message(s) and keep only server response(s)
+      const lastUserMessageContent = userMessage.content.toString();
+      
+      // Find all AI messages from the response
+      const aiMessages = parsedMessages.filter(msg => 
+        msg._getType() === 'ai' || msg._getType() === 'system'
+      );
+      
+      // Update messages state by appending only the AI responses 
+      // to the existing messages array
+      if (aiMessages.length > 0) {
+        setMessages(prev => [...prev, ...aiMessages]);
+      }
     } catch (error) {
       console.error('Error sending message:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Function to toggle recording
+  const toggleRecording = () => {
+    const newRecordingState = !isRecording;
+    setIsRecording(newRecordingState);
+    chrome.runtime.sendMessage({ 
+      type: 'TOGGLE_RECORDING', 
+      enabled: newRecordingState 
+    } as ChromeMessage);
+  };
+
+  // Function to clear network calls
+  const clearNetworkCalls = () => {
+    chrome.runtime.sendMessage({ type: 'CLEAR_NETWORK_CALLS' } as ChromeMessage);
+    setNetworkCalls([]);
+  };
+
+  // Function to toggle theme between dark and light
+  const toggleTheme = () => {
+    const newThemeState = !isDarkMode;
+    setIsDarkMode(newThemeState);
+    
+    if (newThemeState) {
+      // Switch to dark mode
+      document.documentElement.classList.add('dark');
+      localStorage.setItem('theme', 'dark');
+    } else {
+      // Switch to light mode
+      document.documentElement.classList.remove('dark');
+      localStorage.setItem('theme', 'light');
     }
   };
 
@@ -259,7 +288,10 @@ function Panel() {
           {/* Clear Data Button */}
           <button 
             className="inline-flex items-center justify-center whitespace-nowrap rounded-md font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-accent hover:bg-accent/80 hover:text-accent-foreground h-9 px-3 py-2 text-destructive"
-            onClick={clearNetworkCalls}
+            onClick={() => {
+              clearNetworkCalls();
+              clearMessages();
+            }}
           >
             <span role="img" aria-label="clear" className="mr-1">🗑️</span>
             Clear Data
@@ -283,7 +315,11 @@ function Panel() {
                   {isHuman ? 'You' : 'Assistant'}
                 </span>
                 <div className={`max-w-[80%] rounded-lg px-5 py-3 ${isHuman ? 'bg-secondary text-secondary-foreground' : 'bg-primary text-primary-foreground'}`}>
-                  <p>{typeof message.content === 'string' ? message.content : JSON.stringify(message.content)}</p>
+                  <p className="whitespace-pre-line">
+                    {typeof message.content === 'string' 
+                      ? message.content 
+                      : JSON.stringify(message.content)}
+                  </p>
                 </div>
               </div>
             );
@@ -292,8 +328,8 @@ function Panel() {
       </div>
       
       {/* Input Form */}
-      <form onSubmit={handleSubmit} className="flex space-x-2">
-        <div className="flex-1 relative">
+      <form onSubmit={handleSubmit} className="flex gap-2">
+        <div className="flex-1">
           <input
             type="text"
             value={input}
