@@ -213,7 +213,7 @@ function Panel() {
               <span role="img" aria-label={isDarkMode ? "dark mode" : "light mode"}>
                 {isDarkMode ? "🌙" : "☀️"}
               </span>
-              <span className="text-sm text-muted-foreground">{isDarkMode ? "Dark" : "Light"}</span>
+              <span className="text-muted-foreground">{isDarkMode ? "Dark" : "Light"}</span>
             </div>
             <button 
               className="relative inline-flex h-[24px] w-[44px] shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50 data-[state=checked]:bg-primary data-[state=unchecked]:bg-input"
@@ -234,7 +234,7 @@ function Panel() {
               <span role="img" aria-label={isRecording ? "recording" : "paused"}>
                 {isRecording ? "🔴" : "⏸️"}
               </span>
-              <span className="text-sm text-muted-foreground">{isRecording ? "Recording" : "Paused"}</span>
+              <span className="text-muted-foreground">{isRecording ? "Recording" : "Paused"}</span>
             </div>
             <button 
               className="relative inline-flex h-[24px] w-[44px] shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50 data-[state=checked]:bg-primary data-[state=unchecked]:bg-input"
@@ -251,7 +251,7 @@ function Panel() {
           
           {/* Clear Data Button */}
           <button 
-            className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-accent hover:bg-accent/80 hover:text-accent-foreground h-9 px-3 py-2 text-destructive"
+            className="inline-flex items-center justify-center whitespace-nowrap rounded-md font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-accent hover:bg-accent/80 hover:text-accent-foreground h-9 px-3 py-2 text-destructive"
             onClick={clearNetworkCalls}
           >
             <span role="img" aria-label="clear" className="mr-1">🗑️</span>
@@ -272,7 +272,7 @@ function Panel() {
                 key={index} 
                 className={`flex flex-col ${isHuman ? 'items-end text-right' : 'items-start text-left'}`}
               >
-                <span className={`text-xs ${isHuman ? 'text-muted-foreground' : 'text-muted-foreground'} mb-1.5 px-1`}>
+                <span className={`${isHuman ? 'text-muted-foreground' : 'text-muted-foreground'} mb-1.5 px-1`}>
                   {isHuman ? 'You' : 'Assistant'}
                 </span>
                 <div className={`max-w-[80%] rounded-lg px-5 py-3 ${isHuman ? 'bg-secondary text-secondary-foreground' : 'bg-primary text-primary-foreground'}`}>
@@ -293,13 +293,13 @@ function Panel() {
             onChange={(e) => setInput(e.target.value)}
             placeholder="Ask about network calls..."
             disabled={loading}
-            className="flex h-10 w-full rounded-md border border-input bg-card text-card-foreground px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+            className="flex h-10 w-full rounded-md border border-input bg-card text-card-foreground px-3 py-2 ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
           />
         </div>
         <button 
           type="submit" 
           disabled={loading}
-          className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2"
+          className="inline-flex items-center justify-center whitespace-nowrap rounded-md font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2"
         >
           Send
         </button>
