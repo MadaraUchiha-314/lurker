@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
 import ReactDOM from 'react-dom/client';
-import { Box, Container, TextField, Button, List, ListItem, Typography, Paper, Switch, FormControlLabel, Tooltip } from '@mui/material';
 import { 
   BaseMessage,
   HumanMessage, 
@@ -8,6 +7,15 @@ import {
   SystemMessage
 } from "@langchain/core/messages";
 import { NetworkCall } from '@lurker-agent/core/dist/types';
+
+// Import CSS
+import './index.css';
+
+// shadcn components - you'll need to install these
+// Run these commands in your project directory:
+// npm install tailwindcss postcss autoprefixer @radix-ui/react-switch @radix-ui/react-tooltip @radix-ui/react-label clsx tailwind-merge lucide-react class-variance-authority tailwindcss-animate
+// npx tailwindcss init -p
+// Then create a components folder and install the specific components
 
 // Define Chrome message type for panel communications
 interface ChromeMessage {
@@ -42,6 +50,7 @@ function Panel() {
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [isRecording, setIsRecording] = useState(true);
+  const [isDarkMode, setIsDarkMode] = useState(false);
 
   useEffect(() => {
     // Request network calls from background script
@@ -55,7 +64,29 @@ function Panel() {
         }
       }
     );
+
+    // Load theme preference from localStorage - now handled by external script
+    // But we still need to sync the React state with the current theme
+    const savedTheme = localStorage.getItem('theme');
+    const isDark = savedTheme === 'dark' || document.documentElement.classList.contains('dark');
+    setIsDarkMode(isDark);
   }, []);
+
+  // Function to toggle theme between dark and light
+  const toggleTheme = () => {
+    const newThemeState = !isDarkMode;
+    setIsDarkMode(newThemeState);
+    
+    if (newThemeState) {
+      // Switch to dark mode
+      document.documentElement.classList.add('dark');
+      localStorage.setItem('theme', 'dark');
+    } else {
+      // Switch to light mode
+      document.documentElement.classList.remove('dark');
+      localStorage.setItem('theme', 'light');
+    }
+  };
 
   // Function to load network calls from background script
   const loadNetworkCalls = () => {
@@ -170,91 +201,116 @@ function Panel() {
     }
   };
 
-  const getMessageDisplay = (message: BaseMessage) => {
-    // Render different message types appropriately
-    const type = message._getType();
-    
-    return (
-      <>
-        <Typography variant="caption" color={type === 'human' ? 'primary.main' : 'secondary.main'}>
-          {type === 'human' ? 'You' : 'Assistant'}
-        </Typography>
-        <Typography>{typeof message.content === 'string' ? message.content : JSON.stringify(message.content)}</Typography>
-      </>
-    );
-  };
-
   return (
-    <Container>
-      <Box sx={{ height: '100vh', display: 'flex', flexDirection: 'column', py: 2 }}>
-        {/* Header with title and buttons */}
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-          <Typography variant="h6" component="h1">Lurker</Typography>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-            <Tooltip title={isRecording ? "Pause network recording" : "Resume network recording"}>
-              <FormControlLabel
-                control={
-                  <Switch
-                    checked={isRecording}
-                    onChange={toggleRecording}
-                    color="primary"
-                    size="small"
-                  />
-                }
-                label={
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                    <span role="img" aria-label={isRecording ? "recording" : "paused"}>
-                      {isRecording ? "🔴" : "⏸️"}
-                    </span>
-                    <Typography variant="body2">
-                      {isRecording ? "Recording" : "Paused"}
-                    </Typography>
-                  </Box>
-                }
-              />
-            </Tooltip>
-            <Button 
-              variant="outlined" 
-              color="error" 
-              onClick={clearNetworkCalls} 
-              startIcon={<span role="img" aria-label="clear">🗑️</span>}
-              size="small"
+    <div className="container mx-auto h-screen flex flex-col p-4 bg-background text-foreground">
+      {/* Header with title and buttons */}
+      <header className="flex justify-between items-center mb-4 border-b border-border pb-4">
+        <h1 className="text-2xl font-bold text-primary">Lurker</h1>
+        <div className="flex items-center space-x-4">
+          {/* Theme Toggle */}
+          <div className="flex items-center space-x-2">
+            <div className="inline-flex items-center space-x-1">
+              <span role="img" aria-label={isDarkMode ? "dark mode" : "light mode"}>
+                {isDarkMode ? "🌙" : "☀️"}
+              </span>
+              <span className="text-sm text-muted-foreground">{isDarkMode ? "Dark" : "Light"}</span>
+            </div>
+            <button 
+              className="relative inline-flex h-[24px] w-[44px] shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50 data-[state=checked]:bg-primary data-[state=unchecked]:bg-input"
+              role="switch"
+              data-state={isDarkMode ? "checked" : "unchecked"}
+              onClick={toggleTheme}
             >
-              Clear Data
-            </Button>
-          </Box>
-        </Box>
+              <span 
+                className="pointer-events-none block h-5 w-5 rounded-full bg-background shadow-lg ring-0 transition-transform data-[state=checked]:translate-x-5 data-[state=unchecked]:translate-x-0"
+                data-state={isDarkMode ? "checked" : "unchecked"}
+              />
+            </button>
+          </div>
 
-        <Paper sx={{ flex: 1, mb: 2, p: 2, overflow: 'auto' }}>
-          <List>
-            {messages.map((message, index) => (
-              <ListItem key={index} sx={{ 
-                flexDirection: 'column', 
-                alignItems: message._getType() === 'human' ? 'flex-end' : 'flex-start',
-                textAlign: message._getType() === 'human' ? 'right' : 'left'
-              }}>
-                {getMessageDisplay(message)}
-              </ListItem>
-            ))}
-          </List>
-        </Paper>
-        
-        <Box component="form" onSubmit={handleSubmit} sx={{ display: 'flex', gap: 1 }}>
-          <TextField
-            fullWidth
+          {/* Recording Toggle */}
+          <div className="flex items-center space-x-2">
+            <div className="inline-flex items-center space-x-1">
+              <span role="img" aria-label={isRecording ? "recording" : "paused"}>
+                {isRecording ? "🔴" : "⏸️"}
+              </span>
+              <span className="text-sm text-muted-foreground">{isRecording ? "Recording" : "Paused"}</span>
+            </div>
+            <button 
+              className="relative inline-flex h-[24px] w-[44px] shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50 data-[state=checked]:bg-primary data-[state=unchecked]:bg-input"
+              role="switch"
+              data-state={isRecording ? "checked" : "unchecked"}
+              onClick={toggleRecording}
+            >
+              <span 
+                className="pointer-events-none block h-5 w-5 rounded-full bg-background shadow-lg ring-0 transition-transform data-[state=checked]:translate-x-5 data-[state=unchecked]:translate-x-0"
+                data-state={isRecording ? "checked" : "unchecked"}
+              />
+            </button>
+          </div>
+          
+          {/* Clear Data Button */}
+          <button 
+            className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-accent hover:bg-accent/80 hover:text-accent-foreground h-9 px-3 py-2 text-destructive"
+            onClick={clearNetworkCalls}
+          >
+            <span role="img" aria-label="clear" className="mr-1">🗑️</span>
+            Clear Data
+          </button>
+        </div>
+      </header>
+
+      {/* Messages Container */}
+      <div className="bg-card rounded-lg border border-border p-4 flex-1 overflow-auto mb-4">
+        <div className="space-y-4">
+          {messages.map((message, index) => {
+            const type = message._getType();
+            const isHuman = type === 'human';
+            
+            return (
+              <div 
+                key={index} 
+                className={`flex flex-col ${isHuman ? 'items-end text-right' : 'items-start text-left'}`}
+              >
+                <span className={`text-xs ${isHuman ? 'text-muted-foreground' : 'text-muted-foreground'} mb-1.5 px-1`}>
+                  {isHuman ? 'You' : 'Assistant'}
+                </span>
+                <div className={`max-w-[80%] rounded-lg px-5 py-3 ${isHuman ? 'bg-secondary text-secondary-foreground' : 'bg-primary text-primary-foreground'}`}>
+                  <p>{typeof message.content === 'string' ? message.content : JSON.stringify(message.content)}</p>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+      
+      {/* Input Form */}
+      <form onSubmit={handleSubmit} className="flex space-x-2">
+        <div className="flex-1 relative">
+          <input
+            type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
             placeholder="Ask about network calls..."
             disabled={loading}
+            className="flex h-10 w-full rounded-md border border-input bg-card text-card-foreground px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
           />
-          <Button type="submit" variant="contained" disabled={loading}>
-            Send
-          </Button>
-        </Box>
-      </Box>
-    </Container>
+        </div>
+        <button 
+          type="submit" 
+          disabled={loading}
+          className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2"
+        >
+          Send
+        </button>
+      </form>
+    </div>
   );
 }
 
 const root = ReactDOM.createRoot(document.getElementById('root')!);
-root.render(<Panel />); 
+root.render(
+  <React.StrictMode>
+    <Panel />
+  </React.StrictMode>
+); 

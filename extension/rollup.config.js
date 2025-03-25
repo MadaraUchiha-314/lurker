@@ -4,6 +4,7 @@ import commonjs from '@rollup/plugin-commonjs';
 import json from '@rollup/plugin-json';
 import copy from 'rollup-plugin-copy';
 import replace from '@rollup/plugin-replace';
+import postcss from 'rollup-plugin-postcss';
 
 export default [
   {
@@ -27,7 +28,8 @@ export default [
       copy({
         targets: [
           { src: 'public/manifest.json', dest: 'dist' },
-          { src: 'src/panel/index.html', dest: 'dist', rename: 'panel.html' }
+          { src: 'src/panel/index.html', dest: 'dist', rename: 'panel.html' },
+          { src: 'src/panel/theme-init.js', dest: 'dist' }
         ]
       })
     ]
@@ -63,6 +65,16 @@ export default [
       replace({
         preventAssignment: true,
         'process.env.NODE_ENV': JSON.stringify('production')
+      }),
+      postcss({
+        config: {
+          path: './postcss.config.js',
+        },
+        extensions: ['.css'],
+        minimize: true,
+        inject: {
+          insertAt: 'top',
+        },
       }),
       typescript({ tsconfig: './tsconfig.json' }),
       nodeResolve({
