@@ -3,6 +3,17 @@ import { NetworkRequest, NetworkResponse, NetworkCall } from '@lurker-agent/core
 // Store network calls organized by tab ID
 const networkCallsByTab: Record<number, NetworkCall[]> = {};
 
+// Flag to control whether recording is enabled
+let isRecordingEnabled = true;
+
+// Load saved recording state on startup
+chrome.storage.local.get('isRecordingEnabled', (result) => {
+  if (result.hasOwnProperty('isRecordingEnabled')) {
+    isRecordingEnabled = result.isRecordingEnabled;
+    console.log(`Loaded recording state from storage: ${isRecordingEnabled ? 'enabled' : 'disabled'}`);
+  }
+});
+
 // Resource type filter for XHR and fetch requests
 const isXhrOrFetch = (type: string) => {
   return type === 'xmlhttprequest' || type === 'fetch';
@@ -40,6 +51,11 @@ chrome.webRequest.onBeforeRequest.addListener(
       return { cancel: false };
     }
 
+    // Skip recording if disabled
+    if (!isRecordingEnabled) {
+      return { cancel: false };
+    }
+
     // Create a tab entry if it doesn't exist
     if (!networkCallsByTab[details.tabId]) {
       networkCallsByTab[details.tabId] = [];
@@ -73,6 +89,11 @@ chrome.webRequest.onCompleted.addListener(
   async (details: chrome.webRequest.WebResponseDetails) => {
     // Only process XHR and fetch requests
     if (!isXhrOrFetch(details.type)) {
+      return;
+    }
+
+    // Skip recording if disabled
+    if (!isRecordingEnabled) {
       return;
     }
 
@@ -127,7 +148,8 @@ chrome.tabs.onActivated.addListener((activeInfo) => {
 
 // Message structure for panel communications
 interface PanelMessage {
-  type: 'GET_NETWORK_CALLS' | 'CLEAR_NETWORK_CALLS' | string;
+  type: 'GET_NETWORK_CALLS' | 'CLEAR_NETWORK_CALLS' | 'TOGGLE_RECORDING' | 'GET_RECORDING_STATUS' | string;
+  enabled?: boolean;
 }
 
 // Handle messages from the panel
@@ -172,6 +194,32 @@ chrome.runtime.onMessage.addListener(
     
     console.log('Network data cleared for all tabs.');
     sendResponse({ success: true });
+    return true;
+  }
+
+  // Handle toggle recording request
+  if (message.type === 'TOGGLE_RECORDING') {
+    console.log(`Received request to ${message.enabled ? 'enable' : 'disable'} network recording.`);
+    
+    // Update recording status if the enabled flag is provided
+    if (message.hasOwnProperty('enabled')) {
+      isRecordingEnabled = !!message.enabled;
+      console.log(`Network recording is now ${isRecordingEnabled ? 'enabled' : 'disabled'}.`);
+      
+      // Save the recording state to chrome storage
+      chrome.storage.local.set({ isRecordingEnabled }, () => {
+        console.log(`Recording state saved to storage: ${isRecordingEnabled ? 'enabled' : 'disabled'}`);
+      });
+    }
+    
+    sendResponse({ success: true, enabled: isRecordingEnabled });
+    return true;
+  }
+
+  // Handle get recording status request
+  if (message.type === 'GET_RECORDING_STATUS') {
+    console.log(`Received request to get recording status. Current status: ${isRecordingEnabled ? 'enabled' : 'disabled'}.`);
+    sendResponse({ success: true, enabled: isRecordingEnabled });
     return true;
   }
 });

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import ReactDOM from 'react-dom/client';
-import { Box, Container, TextField, Button, List, ListItem, Typography, Paper } from '@mui/material';
+import { Box, Container, TextField, Button, List, ListItem, Typography, Paper, Switch, FormControlLabel, Tooltip } from '@mui/material';
 import { 
   BaseMessage,
   HumanMessage, 
@@ -12,6 +12,7 @@ import { NetworkCall } from '@lurker-agent/core/dist/types';
 // Define Chrome message type for panel communications
 interface ChromeMessage {
   type: string;
+  enabled?: boolean;
 }
 
 // Define Chrome message response type
@@ -40,10 +41,20 @@ function Panel() {
   const [networkCalls, setNetworkCalls] = useState<NetworkCall[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
+  const [isRecording, setIsRecording] = useState(true);
 
   useEffect(() => {
     // Request network calls from background script
     loadNetworkCalls();
+    
+    // Check recording status on load
+    chrome.runtime.sendMessage({ type: 'GET_RECORDING_STATUS' } as ChromeMessage, 
+      (response) => {
+        if (response && response.hasOwnProperty('enabled')) {
+          setIsRecording(response.enabled);
+        }
+      }
+    );
   }, []);
 
   // Function to load network calls from background script
@@ -68,6 +79,23 @@ function Panel() {
           setMessages([]);
         } else {
           console.error('Failed to clear network calls');
+        }
+      }
+    );
+  };
+
+  // Function to toggle network request recording
+  const toggleRecording = () => {
+    const newStatus = !isRecording;
+    setIsRecording(newStatus);
+    chrome.runtime.sendMessage({ type: 'TOGGLE_RECORDING', enabled: newStatus } as ChromeMessage, 
+      (response) => {
+        if (response && response.success) {
+          console.log(`Network recording ${newStatus ? 'enabled' : 'disabled'} successfully`);
+        } else {
+          console.error('Failed to toggle network recording');
+          // Revert the state change if the operation failed
+          setIsRecording(!newStatus);
         }
       }
     );
@@ -159,18 +187,42 @@ function Panel() {
   return (
     <Container>
       <Box sx={{ height: '100vh', display: 'flex', flexDirection: 'column', py: 2 }}>
-        {/* Header with title and clear button */}
+        {/* Header with title and buttons */}
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-          <Typography variant="h6" component="h1">Lurker Network Monitor</Typography>
-          <Button 
-            variant="outlined" 
-            color="error" 
-            onClick={clearNetworkCalls} 
-            startIcon={<span role="img" aria-label="clear">🗑️</span>}
-            size="small"
-          >
-            Clear Data
-          </Button>
+          <Typography variant="h6" component="h1">Lurker</Typography>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <Tooltip title={isRecording ? "Pause network recording" : "Resume network recording"}>
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={isRecording}
+                    onChange={toggleRecording}
+                    color="primary"
+                    size="small"
+                  />
+                }
+                label={
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                    <span role="img" aria-label={isRecording ? "recording" : "paused"}>
+                      {isRecording ? "🔴" : "⏸️"}
+                    </span>
+                    <Typography variant="body2">
+                      {isRecording ? "Recording" : "Paused"}
+                    </Typography>
+                  </Box>
+                }
+              />
+            </Tooltip>
+            <Button 
+              variant="outlined" 
+              color="error" 
+              onClick={clearNetworkCalls} 
+              startIcon={<span role="img" aria-label="clear">🗑️</span>}
+              size="small"
+            >
+              Clear Data
+            </Button>
+          </Box>
         </Box>
 
         <Paper sx={{ flex: 1, mb: 2, p: 2, overflow: 'auto' }}>
